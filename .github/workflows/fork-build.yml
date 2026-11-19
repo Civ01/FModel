@@ -1,0 +1,81 @@
+name: Fork Build
+
+# Builds feature branches of the Civ01 fork and publishes FModel.exe as a workflow artifact.
+# Upstream's main.yml / qa.yml are left untouched.
+
+on:
+  push:
+    branches: [ 'feature/**', 'fix/**' ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: fork-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Viewer tests (headless)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: GIT Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+
+      - name: .NET 10 Setup
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test
+        run: dotnet test FModel.Tests/FModel.Tests.csproj -c Release --logger "trx;LogFileName=results.trx" --results-directory TestResults
+
+      - name: Upload test renders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: viewer-test-renders
+          path: |
+            FModel.Tests/bin/Release/net10.0/TestResults/curve-renders/*.png
+            TestResults/*.trx
+          if-no-files-found: ignore
+          retention-days: 14
+
+  build:
+    name: Build FModel (win-x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: GIT Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+
+      - name: .NET 10 Setup
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Artifact Name
+        id: meta
+        shell: pwsh
+        run: |
+          $branch = "${{ github.head_ref || github.ref_name }}" -replace '[^A-Za-z0-9._-]', '-'
+          $sha = "${{ github.sha }}".Substring(0, 7)
+          "name=FModel-$branch-$sha" >> $env:GITHUB_OUTPUT
+
+      - name: .NET Restore
+        run: dotnet restore "./FModel/FModel.csproj" -r win-x64
+
+      - name: .NET Publish
+        run: dotnet publish "./FModel/FModel.csproj" -c Release --no-restore --no-self-contained -r win-x64 -f net10.0-windows -o "./FModel/bin/Publish/" -p:PublishReadyToRun=false -p:PublishSingleFile=true -p:DebugType=None -p:GenerateDocumentationFile=false -p:DebugSymbols=false
+
+      - name: Upload FModel.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.name }}
+          path: ./FModel/bin/Publish/FModel.exe
+          if-no-files-found: error
+          retention-days: 30
