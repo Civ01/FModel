@@ -17,6 +17,7 @@ using FModel.Framework;
 using FModel.Services;
 using FModel.Settings;
 using FModel.ViewModels.Commands;
+using FModel.ViewModels.Viewers;
 using FModel.Views.Resources.Controls;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Highlighting;
@@ -312,6 +313,36 @@ public class TabItem : ViewModel
         }
     }
 
+    private ViewerViewModel _viewer;
+    /// <summary>Visual viewer (curve, graph, ...) shown under the document, or filling the tab when <see cref="IsViewerOnly"/>.</summary>
+    public ViewerViewModel Viewer
+    {
+        get => _viewer;
+        private set
+        {
+            if (_viewer == value)
+                return;
+
+            SetProperty(ref _viewer, value);
+            RaisePropertyChanged(nameof(HasViewer));
+        }
+    }
+
+    public bool HasViewer => Viewer != null;
+
+    private bool _isViewerOnly;
+    /// <summary>The tab only shows its viewer (opened via "Open in Separate Tab").</summary>
+    public bool IsViewerOnly
+    {
+        get => _isViewerOnly;
+        set => SetProperty(ref _isViewerOnly, value);
+    }
+
+    private ViewerViewModel _closedViewer;
+    /// <summary>A viewer the user closed that can be shown again from the tab's context menu.</summary>
+    public bool HasClosedViewer => _closedViewer != null;
+    public string ReopenViewerHeader => _closedViewer != null ? $"Show {_closedViewer.Title}" : "Show Viewer";
+
     public string Header => $"{Entry.Name}{(string.IsNullOrEmpty(TitleExtra) ? "" : $" ({TitleExtra})")}";
 
     public bool HasImage => SelectedImage != null;
@@ -342,6 +373,9 @@ public class TabItem : ViewModel
         ScrollTrigger = null;
         Application.Current.Dispatcher.Invoke(() =>
         {
+            SetClosedViewer(null);
+            Viewer = null;
+            IsViewerOnly = false;
             _images.Clear();
             SelectedImage = null;
             RaisePropertyChanged(nameof(HasMultipleImages));
@@ -434,6 +468,64 @@ public class TabItem : ViewModel
 
     public void GoPreviousImage() => SelectedImage = _images.Previous(SelectedImage);
     public void GoNextImage() => SelectedImage = _images.Next(SelectedImage);
+
+    /// <summary>Shows <paramref name="viewer"/> under the document. Safe to call from worker threads.</summary>
+    public void SetViewer(ViewerViewModel viewer)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            if (viewer != null) viewer.Owner = this;
+            SetClosedViewer(null);
+            Viewer = viewer;
+        });
+    }
+
+    /// <summary>Hides the viewer; it can be shown again with <see cref="ReopenViewer"/>.</summary>
+    public void CloseViewer()
+    {
+        if (Viewer == null)
+            return;
+
+        SetClosedViewer(Viewer);
+        Viewer = null;
+    }
+
+    public void ReopenViewer()
+    {
+        if (_closedViewer == null)
+            return;
+
+        var viewer = _closedViewer;
+        SetClosedViewer(null);
+        viewer.Owner = this;
+        Viewer = viewer;
+    }
+
+    /// <summary>Removes the viewer from this tab without keeping it for reopening (it moved elsewhere).</summary>
+    public ViewerViewModel DetachViewer()
+    {
+        var viewer = Viewer;
+        Viewer = null;
+        return viewer;
+    }
+
+    private void SetClosedViewer(ViewerViewModel viewer)
+    {
+        _closedViewer = viewer;
+        RaisePropertyChanged(nameof(HasClosedViewer));
+        RaisePropertyChanged(nameof(ReopenViewerHeader));
+    }
+
+    public void SaveViewerImage(byte[] png, string suffix, bool updateUi)
+    {
+        var fileName = $"{Entry.NameWithoutExtension}_{suffix}.png";
+        var path = Path.Combine(UserSettings.Default.TextureDirectory,
+            UserSettings.Default.KeepDirectoryStructure ? Entry.Directory : "", fileName).Replace('\\', '/');
+
+        Directory.CreateDirectory(path.SubstringBeforeLast('/'));
+        File.WriteAllBytes(path, png);
+        SaveCheck(path, fileName, updateUi);
+    }
 
     public void SetDocumentText(string text, bool save, bool updateUi)
     {
@@ -566,6 +658,27 @@ public class TabControlViewModel : ViewModel
         {
             _tabItems.Add(new TabItem(entry));
             SelectedTab = _tabItems.Last();
+        });
+    }
+
+    /// <summary>Moves <paramref name="source"/>'s viewer into a new tab that shows only the viewer.</summary>
+    public void OpenViewerInNewTab(TabItem source)
+    {
+        if (source?.Viewer == null || !CanAddTabs)
+            return;
+
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            var viewer = source.DetachViewer();
+            var tab = new TabItem(source.Entry)
+            {
+                TitleExtra = viewer.Title,
+                IsViewerOnly = true,
+                Document = new TextDocument()
+            };
+            tab.SetViewer(viewer);
+            _tabItems.Add(tab);
+            SelectedTab = tab;
         });
     }
 

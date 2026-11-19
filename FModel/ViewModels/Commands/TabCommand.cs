@@ -38,6 +38,18 @@ public class TabCommand : ViewModelCommand<TabItem>
             case "Find_References":
                 _applicationView.CUE4Parse.FindReferences(tabViewModel.Entry);
                 break;
+            case "Viewer_OpenInNewTab":
+                _applicationView.CUE4Parse.TabControl.OpenViewerInNewTab(tabViewModel);
+                break;
+            case "Viewer_Close":
+                if (tabViewModel.IsViewerOnly)
+                    _applicationView.CUE4Parse.TabControl.RemoveTab(tabViewModel);
+                else
+                    tabViewModel.CloseViewer();
+                break;
+            case "Viewer_Reopen":
+                tabViewModel.ReopenViewer();
+                break;
             case "Assets_Decompile":
                 _applicationView.CUE4Parse.Decompile(tabViewModel.Entry);
                 break;

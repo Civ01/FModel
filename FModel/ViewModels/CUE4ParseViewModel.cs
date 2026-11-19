@@ -71,6 +71,7 @@ using CUE4Parse.UE4.Objects.Core.Serialization;
 using CUE4Parse.UE4.Objects.Engine;
 using CUE4Parse.UE4.Objects.UObject;
 using CUE4Parse.UE4.Objects.UObject.Editor;
+using CUE4Parse.UE4.Objects.Engine.Curves;
 using CUE4Parse.UE4.Oodle.Objects;
 using CUE4Parse.UE4.Readers;
 using CUE4Parse.UE4.Shaders;
@@ -85,6 +86,8 @@ using FModel.Extensions;
 using FModel.Framework;
 using FModel.Services;
 using FModel.Settings;
+using FModel.ViewModels.Viewers;
+using FModel.Viewers.Curves;
 using FModel.Views;
 using FModel.Views.Resources.Controls;
 using Newtonsoft.Json;
@@ -1275,6 +1278,11 @@ public class CUE4ParseViewModel : ViewModel
                 TabControl.AddTab($"{luaScript.Name}.lua");
                 TabControl.SelectedTab.Highlighter = AvalonExtensions.HighlighterSelector("lua");
                 TabControl.SelectedTab.SetDocumentText(luaScript.Code, false, false);
+                return true;
+            }
+            case UCurveBase when isNone && updateUi && pointer.Object.Value is { } curveObject && CurveAsset.TryCreate(curveObject, out var curveAsset):
+            {
+                TabControl.SelectedTab.SetViewer(new CurveViewerViewModel(curveAsset));
                 return true;
             }
             case UPaperSprite when (isNone || saveTextures) && pointer.Object.Value is UPaperSprite paperSprite:

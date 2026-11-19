@@ -1,0 +1,91 @@
+<UserControl x:Class="FModel.Views.Resources.Controls.Viewers.CurveViewerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:viewers="clr-namespace:FModel.Views.Resources.Controls.Viewers"
+             xmlns:converters="clr-namespace:FModel.Views.Resources.Converters"
+             xmlns:adonisUi="clr-namespace:AdonisUI;assembly=AdonisUI">
+    <UserControl.Resources>
+        <Style x:Key="ViewerToolButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Margin" Value="2 0 0 0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style x:Key="ViewerToolIcon" TargetType="Path">
+            <Setter Property="Stretch" Value="Uniform" />
+            <Setter Property="Fill" Value="{DynamicResource {x:Static adonisUi:Brushes.ForegroundBrush}}" />
+        </Style>
+    </UserControl.Resources>
+
+    <DockPanel Background="{DynamicResource {x:Static adonisUi:Brushes.Layer0BackgroundBrush}}">
+        <Border DockPanel.Dock="Top" Padding="8 3 6 3" BorderThickness="0 0 0 1"
+                Background="{DynamicResource {x:Static adonisUi:Brushes.Layer1BackgroundBrush}}"
+                BorderBrush="{DynamicResource {x:Static adonisUi:Brushes.Layer1BorderBrush}}"
+                TextElement.Foreground="{DynamicResource {x:Static adonisUi:Brushes.ForegroundBrush}}">
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Margin="0 0 8 0" VerticalAlignment="Center" FontSize="11"
+                               Foreground="{DynamicResource {x:Static adonisUi:Brushes.DisabledForegroundBrush}}"
+                               Text="Wheel zoom · Ctrl time · Shift value · Drag pan" />
+                    <Button Style="{StaticResource ViewerToolButton}" ToolTip="Fit to View (F / double-click)" Click="OnFitClick">
+                        <Path Style="{StaticResource ViewerToolIcon}" Data="{StaticResource GridIcon}" />
+                    </Button>
+                    <Button Style="{StaticResource ViewerToolButton}" ToolTip="Export Whole Curve as PNG" Click="OnExportContentClick">
+                        <Path Style="{StaticResource ViewerToolIcon}" Data="{StaticResource SaveIcon}" />
+                    </Button>
+                    <Button Style="{StaticResource ViewerToolButton}" ToolTip="Open in Separate Tab"
+                            Command="{Binding Owner.TabCommand}" CommandParameter="Viewer_OpenInNewTab"
+                            Visibility="{Binding Owner.IsViewerOnly, Converter={x:Static converters:InvertBoolToVisibilityConverter.Instance}, FallbackValue=Collapsed}">
+                        <Path Style="{StaticResource ViewerToolIcon}" Data="M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19C3,20.1 3.89,21 5,21H19C20.1,21 21,20.1 21,19V12H19V19M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3H14Z" />
+                    </Button>
+                    <Button Style="{StaticResource ViewerToolButton}" ToolTip="Close Viewer"
+                            Command="{Binding Owner.TabCommand}" CommandParameter="Viewer_Close">
+                        <Path Style="{StaticResource ViewerToolIcon}" Data="{StaticResource CloseIcon}" />
+                    </Button>
+                </StackPanel>
+
+                <Path DockPanel.Dock="Left" Width="14" Height="14" Margin="0 0 6 0" VerticalAlignment="Center"
+                      Style="{StaticResource ViewerToolIcon}" Data="{StaticResource CurveIcon}" />
+                <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" Margin="0 0 12 0"
+                           Text="{Binding Summary}" />
+
+                <ItemsControl ItemsSource="{Binding Channels}" VerticalAlignment="Center"
+                              Visibility="{Binding HasChannelToggles, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox Margin="0 0 12 0" VerticalAlignment="Center" IsChecked="{Binding IsVisible}" ToolTip="{Binding ToolTip}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Rectangle Width="10" Height="3" Margin="0 0 4 0" VerticalAlignment="Center" Fill="{Binding Brush}" />
+                                    <TextBlock FontSize="11" VerticalAlignment="Center" Text="{Binding Name}" />
+                                </StackPanel>
+                            </CheckBox>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+        </Border>
+
+        <viewers:SkiaCanvasView x:Name="CurveCanvas" Scene="{Binding Scene}" View="{Binding View}">
+            <viewers:SkiaCanvasView.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Fit to View" InputGestureText="F" Click="OnFitClick" />
+                    <Separator />
+                    <MenuItem Header="Export Visible Area as PNG" Click="OnExportViewportClick" />
+                    <MenuItem Header="Export Whole Curve as PNG" Click="OnExportContentClick" />
+                    <Separator />
+                    <MenuItem Header="Open in Separate Tab" Command="{Binding Owner.TabCommand}" CommandParameter="Viewer_OpenInNewTab"
+                              Visibility="{Binding Owner.IsViewerOnly, Converter={x:Static converters:InvertBoolToVisibilityConverter.Instance}, FallbackValue=Collapsed}" />
+                    <MenuItem Header="Close Viewer" Command="{Binding Owner.TabCommand}" CommandParameter="Viewer_Close" />
+                </ContextMenu>
+            </viewers:SkiaCanvasView.ContextMenu>
+        </viewers:SkiaCanvasView>
+    </DockPanel>
+</UserControl>

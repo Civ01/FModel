@@ -3,6 +3,8 @@
                     xmlns:local="clr-namespace:FModel"
                     xmlns:system="clr-namespace:System;assembly=mscorlib"
                     xmlns:controls="clr-namespace:FModel.Views.Resources.Controls"
+                    xmlns:viewerControls="clr-namespace:FModel.Views.Resources.Controls.Viewers"
+                    xmlns:viewerModels="clr-namespace:FModel.ViewModels.Viewers"
                     xmlns:soundOut="clr-namespace:CSCore.SoundOut;assembly=CSCore"
                     xmlns:audioControls="clr-namespace:FModel.Views.Resources.Controls.Aup"
                     xmlns:converters="clr-namespace:FModel.Views.Resources.Converters"
@@ -486,6 +488,10 @@
         </Setter>
     </Style>
 
+    <DataTemplate DataType="{x:Type viewerModels:CurveViewerViewModel}">
+        <viewerControls:CurveViewerView />
+    </DataTemplate>
+
     <Style x:Key="GameFilesTabControl" TargetType="TabControl" BasedOn="{StaticResource {x:Type TabControl}}">
         <Setter Property="ItemsSource" Value="{Binding CUE4Parse.TabControl.TabsItems, IsAsync=True}" />
         <Setter Property="SelectedItem" Value="{Binding CUE4Parse.TabControl.SelectedTab}" />
@@ -527,7 +533,13 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <controls:AvalonEditor x:Name="DynamicArea" Grid.Column="0" Grid.RowSpan="2" DataContext="{Binding SelectedItem, ElementName=TabControlName}" />
+                        <viewerControls:ViewerSplitPanel x:Name="DynamicArea" Grid.Column="0" Grid.RowSpan="2"
+                                                         DataContext="{Binding SelectedItem, ElementName=TabControlName}"
+                                                         Viewer="{Binding Viewer}"
+                                                         IsViewerOnly="{Binding IsViewerOnly}"
+                                                         ViewerHeight="{Binding ViewerPaneHeight, Source={x:Static settings:UserSettings.Default}, Mode=TwoWay}">
+                            <controls:AvalonEditor DataContext="{Binding SelectedItem, ElementName=TabControlName}" />
+                        </viewerControls:ViewerSplitPanel>
                         <GridSplitter Grid.Column="1" Grid.RowSpan="2" Width="4" VerticalAlignment="Stretch" ResizeDirection="Columns" KeyboardIncrement="0"
                                       Visibility="{Binding SelectedItem.HasImage, ElementName=TabControlName, Converter={StaticResource BoolToVisibilityConverter}}"
                                       Background="{DynamicResource {x:Static adonisUi:Brushes.Layer3BackgroundBrush}}" />
@@ -925,6 +937,16 @@
                                     </MenuItem.Icon>
                                 </MenuItem>
                                 <Separator />
+                                <MenuItem Header="{Binding ReopenViewerHeader}" Command="{Binding TabCommand}" CommandParameter="Viewer_Reopen"
+                                          Visibility="{Binding HasClosedViewer, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <MenuItem.Icon>
+                                        <Viewbox Width="16" Height="16">
+                                            <Canvas Width="24" Height="24">
+                                                <Path Fill="{DynamicResource {x:Static adonisUi:Brushes.ForegroundBrush}}" Data="{StaticResource CurveIcon}" />
+                                            </Canvas>
+                                        </Viewbox>
+                                    </MenuItem.Icon>
+                                </MenuItem>
                                 <MenuItem Header="Show Metadata" Command="{Binding TabCommand}"  CommandParameter="Assets_Show_Metadata">
                                     <MenuItem.Icon>
                                         <Viewbox Width="16" Height="16">

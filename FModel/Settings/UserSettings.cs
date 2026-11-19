@@ -162,6 +162,14 @@ public sealed class UserSettings : ViewModel
         set => SetProperty(ref _avalonImageSize, value);
     }
 
+    private double _viewerPaneHeight = 320;
+    /// <summary>Height of the curve/graph viewer pane under a tab's JSON.</summary>
+    public double ViewerPaneHeight
+    {
+        get => _viewerPaneHeight;
+        set => SetProperty(ref _viewerPaneHeight, value);
+    }
+
     private string _audioDeviceId;
     public string AudioDeviceId
     {
