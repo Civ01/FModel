@@ -64,7 +64,8 @@ public class ViewerSplitPanel : Grid
             VerticalAlignment = VerticalAlignment.Stretch,
             ResizeDirection = GridResizeDirection.Rows,
             ResizeBehavior = GridResizeBehavior.PreviousAndNext,
-            KeyboardIncrement = 0,
+            // KeyboardIncrement must be > 0 (GridSplitter.IsValidDelta); disable keyboard resizing by not taking focus instead.
+            Focusable = false,
             ShowsPreview = false
         };
         _splitter.SetResourceReference(BackgroundProperty, AdonisUI.Brushes.Layer3BackgroundBrush);
