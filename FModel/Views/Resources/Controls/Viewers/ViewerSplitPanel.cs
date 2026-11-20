@@ -75,27 +75,40 @@ public class ViewerSplitPanel : Grid
         _presenter = new ContentPresenter();
         _presenter.SetBinding(ContentPresenter.ContentProperty, new Binding(nameof(Viewer)) { Source = this });
         SetRow(_presenter, 2);
-    }
 
-    protected override void OnInitialized(System.EventArgs e)
-    {
-        base.OnInitialized(e);
-        // Children declared in XAML (the document editor) go in the top row.
-        foreach (UIElement child in Children)
-            SetRow(child, 0);
-
+        // Add our own children here rather than in OnInitialized: when created from a template, WPF can raise
+        // Initialized from inside this constructor (the first RowDefinitions.Add), before the fields above exist.
         Children.Add(_splitter);
         Children.Add(_presenter);
         UpdateState();
     }
 
-    private UIElement Document => Children.Count > 0 && Children[0] != _splitter && Children[0] != _presenter ? Children[0] : null;
+    protected override void OnVisualChildrenChanged(DependencyObject visualAdded, DependencyObject visualRemoved)
+    {
+        base.OnVisualChildrenChanged(visualAdded, visualRemoved);
+        // Children declared in XAML (the document editor) go in the top row.
+        if (visualAdded is UIElement added && !IsOwnChild(added))
+            SetRow(added, 0);
+        UpdateState();
+    }
+
+    private bool IsOwnChild(UIElement element) => element == _splitter || element == _presenter;
+
+    private UIElement Document
+    {
+        get
+        {
+            foreach (UIElement child in Children)
+                if (child != null && !IsOwnChild(child)) return child;
+            return null;
+        }
+    }
 
     private static void OnStateChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((ViewerSplitPanel) d).UpdateState();
 
     private void UpdateState()
     {
-        if (_updating) return;
+        if (_updating || _splitter == null || _presenter == null) return;
         _updating = true;
         try
         {
